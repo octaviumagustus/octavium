@@ -84,6 +84,10 @@
       </div>
       <label id="lblTipoOrg">Tipo de fiscalía</label>
       <select data-k="orgTipo"></select>
+      <div data-if="orgTipo:Juzgado Mixto">
+        <label>Materia del proceso</label>
+        <select data-k="mixtoRama"><option value="civil">Civil / familia (demandante – demandado)</option><option value="penal">Penal (imputado – agraviado)</option></select>
+      </div>
       <div data-if="orgTipo:__otro">
         <label>Despacho completo (empiece con DEL / DE LA)</label>
         <input type="text" data-k="despacho" placeholder="del Primer Despacho de la Fiscalía Provincial Penal Corporativa de Hunter">
@@ -133,8 +137,8 @@
         <select data-k="materia">
           <option value="">— elegir —</option>
           <option>Alimentos</option><option>Aumento de alimentos</option><option>Reducción de alimentos</option><option>Exoneración de alimentos</option>
-          <option>Prorrateo de alimentos</option><option>Tenencia y custodia</option><option>Régimen de visitas</option><option>Filiación extramatrimonial</option>
-          <option>Divorcio por causal</option><option>Separación convencional y divorcio ulterior</option>
+          <option>Prorrateo de alimentos</option><option>Tenencia y custodia</option><option>Variación de tenencia</option><option>Régimen de visitas</option><option>Filiación extramatrimonial</option>
+          <option>Divorcio por causal</option><option>Suspensión de la patria potestad</option><option>Autorización de viaje de menor</option><option>Designación de apoyos y salvaguardias</option><option>Separación convencional y divorcio ulterior</option>
           <option>Obligación de dar suma de dinero</option><option>Desalojo por ocupación precaria</option><option>Desalojo por vencimiento de contrato</option>
           <option>Indemnización por daños y perjuicios</option><option>Reivindicación</option><option>Prescripción adquisitiva de dominio</option>
           <option>Nulidad de acto jurídico</option><option>Otorgamiento de escritura pública</option><option>División y partición</option>
@@ -286,7 +290,7 @@
     abDomicilio: 'Calle Santo Domingo N.° 138, Oficina 04, Segundo Piso, Cercado de Arequipa', abCasilla: '51341',
     abCelular: '912 526 889', abCorreo: 'zchegustavo@gmail.com', ciudad: 'Arequipa', provincia: 'Arequipa',
     anexos: 'Copia simple del Documento Nacional de Identidad del recurrente.',
-    tipo: 'fiscalia', sexoDest: 'f', sexo: 'm', calidad: 'investigado', firmas: 'ambos',
+    tipo: 'fiscalia', mixtoRama: 'civil', sexoDest: 'f', sexo: 'm', calidad: 'investigado', firmas: 'ambos',
     etapa: 'dar inicio a diligencias preliminares', orgTipo: 'Fiscalía Provincial Penal Corporativa', sede: 'Arequipa'
   };
   var ORD_M = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo', 'Décimo Primer', 'Décimo Segundo'];
@@ -315,8 +319,12 @@
     civil: [['demandado', 'Demandado', 'demandado', 'demandada', 'civ'], ['demandante', 'Demandante', 'demandante', 'demandante', 'dte']]
   };
   // juzgados no penales: el escrito habla de materia y de demandante / demandado
-  var CIVILES = ['Juzgado Especializado Civil', 'Juzgado de Paz Letrado', 'Juzgado Mixto'];
-  function esCivil() { return val('tipo') === 'juzgado' && CIVILES.indexOf(val('orgTipo')) >= 0; }
+  var CIVILES = ['Juzgado Especializado Civil', 'Juzgado de Paz Letrado', 'Juzgado de Familia'];
+  function esCivil() {
+    if (val('tipo') !== 'juzgado') return false;
+    // el juzgado mixto ve causas civiles y penales: lo decide el usuario
+    return CIVILES.indexOf(val('orgTipo')) >= 0 || (val('orgTipo') === 'Juzgado Mixto' && val('mixtoRama') !== 'penal');
+  }
   function grupo() { return esCivil() ? 'civil' : val('tipo') === 'juzgado' ? 'juzgado' : 'fiscalia'; }
   var PRESETS = {
     reprog: ['REPROGRAMACIÓN DE DILIGENCIA', 'Solicito la reprogramación de la diligencia de [declaración / audiencia] programada para el día [fecha y hora], toda vez que mi abogado defensor recién asume mi patrocinio y requiere de un plazo razonable para informarse de los actuados y preparar la defensa.'],
@@ -342,7 +350,7 @@
     e.value = v;
     // valor guardado que ya no está en el menú: pasa a "Otro (escribir)"
     if (e.tagName === 'SELECT' && e.value !== v && v && e.querySelector('option[value="__otro"]')) { e.value = '__otro'; setVal(k + 'Otro', v); }
-    if (k === 'tipo' || k === 'orgTipo') fillByTipo();
+    if (k === 'tipo' || k === 'orgTipo' || k === 'mixtoRama') fillByTipo();
   }
   function cv(k) { var x = val(k); return x === '__otro' ? val(k + 'Otro') : x; }
   function opts(k, items) {
