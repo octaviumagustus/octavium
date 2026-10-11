@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de Apersonamiento</title>
+<style>
+  :root {
+    --ink: #1b2430; --muted: #5d6877; --line: #d9dee6; --bg: #eef1f5; --panel: #ffffff;
+    --brand: #14304f; --brand-2: #1f4a78; --accent: #9a6b1f; --warn: #fff2a8; --ok: #1d7a46;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI", system-ui, Arial, sans-serif; }
+  header.bar { background: var(--brand); color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header.bar h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  header.bar .sub { color: #b9c8da; font-size: 12px; }
+  header.bar .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; border: 1px solid transparent; border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  .btn-main { background: #e9b949; color: #2a1f05; font-weight: 600; }
+  .btn-main:hover { background: #f3c75d; }
+  .btn-ghost { background: transparent; color: #fff; border-color: #5f7c9c; }
+  .btn-ghost:hover { background: var(--brand-2); }
+  .wrap { display: grid; grid-template-columns: 430px 1fr; height: calc(100% - 52px); }
+  .form { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 12px 16px 40px; }
+  .preview { overflow: auto; padding: 22px; }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 10px 12px 12px; }
+  legend { font-weight: 600; color: var(--brand); padding: 0 6px; font-size: 13px; }
+  details.grp { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; }
+  details.grp summary { font-weight: 600; color: var(--brand); cursor: pointer; font-size: 13px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+  input[type=text], input[type=date], select, textarea {
+    width: 100%; font: inherit; color: var(--ink); background: #fff; border: 1px solid #c4ccd7; border-radius: 6px; padding: 6px 8px;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #8fb2d9; border-color: #5e8fc2; }
+  textarea { resize: vertical; min-height: 58px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+  .chk { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0 2px; color: var(--ink); font-size: 13px; }
+  .chk input { margin-top: 3px; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .status { font-size: 12px; padding: 3px 9px; border-radius: 20px; background: #fff2a8; color: #5a4700; font-weight: 600; }
+  .status.ok { background: #cdeedb; color: #0f5a31; }
+  .sheet { background: #fff; width: 21cm; min-height: 29.7cm; margin: 0 auto; padding: 2.5cm 2.5cm 2.5cm 3cm;
+           box-shadow: 0 2px 14px rgba(20, 40, 70, .18); font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #000; }
+  .ph { background: var(--warn); }
+  .hidden { display: none !important; }
+  @media (max-width: 1050px) { .wrap { grid-template-columns: 1fr; height: auto; } .form { border-right: 0; } .sheet { width: 100%; padding: 1.5cm; } }
+  @page { size: A4; margin: 2.5cm 2.5cm 2.5cm 3cm; }
+  @media print {
+    body { background: #fff; }
+    header.bar, .form { display: none !important; }
+    .wrap { display: block; height: auto; }
+    .preview { padding: 0; overflow: visible; }
+    .sheet { box-shadow: none; width: auto; min-height: 0; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div>
+    <h1>Generador de Apersonamiento</h1>
+    <div class="sub">Complete los datos a la izquierda; el escrito se redacta solo.</div>
+  </div>
+  <span id="status" class="status">—</span>
+  <div class="actions">
+    <button class="btn-ghost" id="btnNuevo" title="Borra los datos del caso y conserva los del abogado">Nuevo escrito</button>
+    <button class="btn-ghost" id="btnCopiar" title="Copia el escrito con formato para pegarlo en Word o Google Docs">Copiar</button>
+    <button class="btn-ghost" id="btnWord">Descargar Word</button>
+    <button class="btn-main" id="btnPdf">Imprimir / PDF</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="form" id="form">
+
+    <fieldset>
+      <legend>1. Despacho y caso</legend>
+      <div class="row">
+        <div><label>Se dirige a</label>
+          <select data-k="tipo"><option value="fiscalia">Fiscalía</option><option value="juzgado">Juzgado</option></select></div>
+        <div><label>Tratamiento</label>
+          <select data-k="sexoDest"><option value="f">Señora</option><option value="m">Señor</option></select></div>
+      </div>
+      <label id="lblTipoOrg">Tipo de fiscalía</label>
+      <select data-k="orgTipo"></select>
+      <div data-if="orgTipo:__otro">
+        <label>Despacho completo (empiece con DEL / DE LA)</label>
+        <input type="text" data-k="despacho" placeholder="del Primer Despacho de la Fiscalía Provincial Penal Corporativa de Hunter">
+      </div>
+      <div data-ifnot="orgTipo:__otro">
+        <div class="row">
+          <div><label id="lblNum">Fiscalía N.° (opcional)</label><select data-k="orgNum" class="ord"></select></div>
+          <div data-if="tipo:fiscalia"><label>Despacho N.° (opcional)</label><select data-k="despNum" class="ord"></select></div>
+        </div>
+        <label>Sede</label>
+        <select data-k="sede">
+          <option>Arequipa</option><option>Cerro Colorado</option><option>Hunter</option><option>Paucarpata</option><option>Mariano Melgar</option>
+          <option>José Luis Bustamante y Rivero</option><option>La Joya</option><option>El Pedregal</option><option>Camaná</option><option>Islay</option>
+          <option>Caylloma</option><option>Castilla</option><option>Condesuyos</option><option>Caravelí</option><option>La Unión</option>
+          <option value="__otro">Otra (escribir)…</option>
+        </select>
+        <div data-if="sede:__otro"><input type="text" data-k="sedeOtro" placeholder="Sede" style="margin-top:6px"></div>
+      </div>
+      <label><span id="lblCargo">Fiscal</span> a cargo (opcional)</label>
+      <input type="text" data-k="fiscal" placeholder="Elizabeth Puma Puma">
+      <div class="row3">
+        <div><label id="lblCaso">Caso N.°</label><input type="text" data-k="caso" placeholder="1506084500-2026-1244"></div>
+        <div><label>Escrito N.°</label><input type="text" data-k="escrito"></div>
+      </div>
+      <div data-if="tipo:juzgado"><label>Especialista (opcional)</label><input type="text" data-k="especialista"></div>
+      <label>Delito</label>
+      <select data-k="delito">
+        <option value="">— elegir —</option>
+        <option>Agresiones en contra de las mujeres o integrantes del grupo familiar</option>
+        <option>Lesiones leves</option><option>Lesiones graves</option><option>Lesiones culposas</option><option>Homicidio culposo</option>
+        <option>Omisión a la asistencia familiar</option><option>Conducción en estado de ebriedad</option>
+        <option>Desobediencia a la autoridad</option><option>Resistencia o desobediencia a la autoridad</option><option>Violencia contra la autoridad</option>
+        <option>Hurto simple</option><option>Hurto agravado</option><option>Robo agravado</option><option>Receptación</option>
+        <option>Estafa</option><option>Apropiación ilícita</option><option>Usurpación</option><option>Daños</option>
+        <option>Falsedad genérica</option><option>Falsificación de documentos</option><option>Falsa declaración en procedimiento administrativo</option>
+        <option>Coacción</option><option>Acoso sexual</option><option>Violación sexual</option>
+        <option>Tocamientos, actos de connotación sexual o actos libidinosos</option>
+        <option>Tráfico ilícito de drogas</option><option>Tenencia ilegal de armas</option>
+        <option>Peculado</option><option>Colusión</option><option>Cohecho</option>
+        <option value="__otro">Otro (escribir)…</option>
+      </select>
+      <div data-if="delito:__otro"><input type="text" data-k="delitoOtro" placeholder="Delito" style="margin-top:6px"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. Patrocinado</legend>
+      <label>Nombres y apellidos</label>
+      <input type="text" data-k="nombre" placeholder="Fredy Wilber Condo Auquitayasi">
+      <div class="row">
+        <div><label>DNI N.°</label><input type="text" data-k="dni" inputmode="numeric" maxlength="8"></div>
+        <div><label>Sexo</label><select data-k="sexo"><option value="m">Masculino</option><option value="f">Femenino</option></select></div>
+      </div>
+      <label>Domicilio real (dirección y distrito)</label>
+      <input type="text" data-k="domicilio" placeholder="Avenida Ramón Castilla 126, P.J. La Tomilla, distrito de Cayma">
+      <div class="row">
+        <div><label>Provincia y departamento de</label><input type="text" data-k="provincia"></div>
+        <div><label>Celular (opcional)</label><input type="text" data-k="telefono" inputmode="numeric"></div>
+      </div>
+      <label>Correo electrónico (opcional)</label>
+      <input type="text" data-k="correo">
+    </fieldset>
+
+    <fieldset>
+      <legend>3. Calidad en que se apersona</legend>
+      <select data-k="calidad"></select>
+      <div data-if="calidad:__otro"><input type="text" data-k="calidadOtro" placeholder="Calidad (por ejemplo: demandado, actor civil)" style="margin-top:6px"></div>
+      <div data-if="@tpl:inv">
+        <div class="row3">
+          <div><label><span class="lblDisp">Disposición</span> N.° (opcional)</label><input type="text" data-k="dispNum" placeholder="01-2026-MP-FN-DFA-FPPC HUNTER-1D"></div>
+          <div><label>Fecha</label><input type="date" data-k="dispFecha"></div>
+        </div>
+        <div data-if="tipo:fiscalia"><label>Que dispone</label>
+          <select data-k="etapa">
+            <option value="dar inicio a diligencias preliminares">dar inicio a diligencias preliminares</option>
+            <option value="formalizar y continuar la investigación preparatoria">formalizar y continuar la investigación preparatoria</option>
+            <option value="ampliar el plazo de las diligencias preliminares">ampliar el plazo de las diligencias preliminares</option>
+            <option value="citarme a rendir mi declaración">citarme a rendir mi declaración</option>
+            <option value="__otro">Otro (escribir)…</option>
+          </select>
+          <div data-if="etapa:__otro"><input type="text" data-k="etapaOtro" placeholder="lo que dispone, en infinitivo" style="margin-top:6px"></div></div>
+        <label>En agravio de</label>
+        <select data-k="agraviado">
+          <option value="">(no indicar)</option><option>el Estado</option><option>la sociedad</option>
+          <option value="__otro">Una persona (escribir nombre)…</option>
+        </select>
+        <div data-if="agraviado:__otro"><input type="text" data-k="agraviadoOtro" placeholder="Nombres y apellidos del agraviado" style="margin-top:6px"></div>
+      </div>
+      <div data-if="@tpl:agr">
+        <label>Investigado (contra quien se sigue el caso)</label>
+        <input type="text" data-k="contra">
+      </div>
+      <div data-if="@tpl:ter">
+        <label>Bien del que es propietario</label>
+        <textarea data-k="bien" placeholder="vehículo menor motocicleta de placa 5833-7V, inscrito en la Partida N.° 60857740 del Registro de Propiedad Vehicular de Arequipa"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. Pedidos adicionales</legend>
+      <label class="chk"><input type="checkbox" data-k="chkNotif"> Notificaciones electrónicas al abogado</label>
+      <div data-if="chkNotif:true"><label class="chk" style="margin-left:22px"><input type="checkbox" data-k="chkNotifCliente"> Incluir también el correo y celular del patrocinado</label></div>
+      <label class="chk"><input type="checkbox" data-k="chkCopias"> Copias simples de <span class="lblCarpeta">la carpeta fiscal</span></label>
+      <label class="chk"><input type="checkbox" data-k="chkOtro"> Otro pedido</label>
+      <div data-if="chkOtro:true">
+        <label>Pedido frecuente (rellena el título y el texto; luego puede retocarlos)</label>
+        <select data-k="otroTipo">
+          <option value="">Texto libre</option>
+          <option value="reprog">Reprogramación de diligencia</option>
+          <option value="declar">Se señale fecha para declarar</option>
+          <option value="lectura">Lectura de la carpeta / expediente</option>
+          <option value="prueba">Ofrecimiento de medio probatorio</option>
+          <option value="domic">Variación de domicilio procesal</option>
+          <option value="virtual">Participación virtual en la diligencia</option>
+        </select>
+        <label>Título de la sección</label><input type="text" data-k="otroTitulo" placeholder="OFRECIMIENTO DE MEDIO PROBATORIO">
+        <label>Texto</label><textarea data-k="otroTexto" rows="4"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>5. Anexos y cierre</legend>
+      <label>Anexos (uno por línea; se numeran solos)</label>
+      <textarea data-k="anexos" rows="3"></textarea>
+      <select id="anexoAdd" style="margin-top:6px">
+        <option value="">+ Agregar anexo frecuente…</option>
+        <option>Copia simple del Documento Nacional de Identidad del recurrente.</option>
+        <option>Constancia de habilitación del abogado defensor.</option>
+        <option>Copia de la cédula de notificación.</option>
+        <option>Declaración jurada con firma legalizada.</option>
+        <option>Copia literal de la partida registral del bien.</option>
+        <option>Copia de la tarjeta de identificación vehicular.</option>
+        <option>Certificado médico legal.</option>
+        <option>Constancia de trabajo.</option>
+        <option>Recibo de servicio que acredita el domicilio real.</option>
+        <option>Comprobante de pago de la tasa por copias.</option>
+      </select>
+      <label>Sumilla (déjela vacía para que se genere sola)</label>
+      <input type="text" data-k="sumilla">
+      <div class="row">
+        <div><label>Ciudad</label><input type="text" data-k="ciudad"></div>
+        <div><label>Fecha del escrito</label><input type="date" data-k="fecha"></div>
+      </div>
+      <label>Firmas</label>
+      <select data-k="firmas"><option value="ambos">Abogado y patrocinado</option><option value="abogado">Solo abogado</option><option value="cliente">Solo patrocinado</option></select>
+    </fieldset>
+
+    <details class="grp">
+      <summary>Datos del abogado (se guardan en este equipo)</summary>
+      <label>Nombres y apellidos</label><input type="text" data-k="abNombre">
+      <div class="row">
+        <div><label>Colegio</label><input type="text" data-k="abColegio"></div>
+        <div><label>Registro</label><input type="text" data-k="abRegistro"></div>
+      </div>
+      <label>Domicilio procesal</label><input type="text" data-k="abDomicilio">
+      <div class="row">
+        <div><label>Casilla electrónica N.°</label><input type="text" data-k="abCasilla"></div>
+        <div><label>Celular</label><input type="text" data-k="abCelular"></div>
+      </div>
+      <label>Correo electrónico</label><input type="text" data-k="abCorreo">
+    </details>
+    <div class="hint">Los datos se guardan solo en este navegador; nada se envía a internet.</div>
+  </div>
+
+  <div class="preview"><div class="sheet" id="sheet"></div></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE = 'apersonamiento.v1';
+  var LAWYER = ['abNombre', 'abColegio', 'abRegistro', 'abDomicilio', 'abCasilla', 'abCelular', 'abCorreo', 'ciudad', 'provincia'];
+  var DEFAULTS = {
+    abNombre: 'Gustavo Miguel Choque Huarca', abColegio: 'Colegio de Abogados de Arequipa', abRegistro: 'C.A.A. N.° 9513',
+    abDomicilio: 'Calle Santo Domingo N.° 138, Oficina 04, Segundo Piso, Cercado de Arequipa', abCasilla: '51341',
+    abCelular: '912 526 889', abCorreo: 'zchegustavo@gmail.com', ciudad: 'Arequipa', provincia: 'Arequipa',
+    anexos: 'Copia simple del Documento Nacional de Identidad del recurrente.',
+    tipo: 'fiscalia', sexoDest: 'f', sexo: 'm', calidad: 'investigado', firmas: 'ambos',
+    etapa: 'dar inicio a diligencias preliminares', orgTipo: 'Fiscalía Provincial Penal Corporativa', sede: 'Arequipa'
+  };
+  var ORD_M = ['Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto', 'Sexto', 'Séptimo', 'Octavo', 'Noveno', 'Décimo', 'Décimo Primer', 'Décimo Segundo'];
+  var ORD_F = ['Primera', 'Segunda', 'Tercera', 'Cuarta', 'Quinta', 'Sexta', 'Séptima', 'Octava', 'Novena', 'Décima', 'Décimo Primera', 'Décimo Segunda'];
+  var ORG = {
+    fiscalia: ['Fiscalía Provincial Penal Corporativa', 'Fiscalía Provincial Penal', 'Fiscalía Provincial Mixta',
+      'Fiscalía Provincial Especializada en Violencia contra la Mujer y los Integrantes del Grupo Familiar',
+      'Fiscalía Provincial Penal Especializada en Delitos contra la Mujer',
+      'Fiscalía Provincial Especializada en Delitos de Corrupción de Funcionarios',
+      'Fiscalía Provincial Especializada en Delitos de Tráfico Ilícito de Drogas',
+      'Fiscalía Provincial Especializada en Materia Ambiental', 'Fiscalía Provincial de Prevención del Delito',
+      'Fiscalía Provincial de Familia', 'Fiscalía Provincial Civil y Familia', 'Fiscalía Superior Penal de Apelaciones'],
+    juzgado: ['Juzgado de Investigación Preparatoria',
+      'Juzgado de Investigación Preparatoria Especializado en Violencia contra la Mujer e Integrantes del Grupo Familiar',
+      'Juzgado Penal Unipersonal', 'Juzgado Penal Colegiado Supraprovincial', 'Juzgado de Familia', 'Juzgado de Paz Letrado',
+      'Juzgado Especializado Civil', 'Juzgado Mixto', 'Sala Penal de Apelaciones']
+  };
+  // [valor, etiqueta del menú, masculino, femenino, modelo de redacción]
+  var CAL = {
+    fiscalia: [['investigado', 'Investigado', 'investigado', 'investigada', 'inv'], ['denunciado', 'Denunciado', 'denunciado', 'denunciada', 'inv'],
+      ['agraviado', 'Agraviado', 'agraviado', 'agraviada', 'agr'], ['denunciante', 'Denunciante', 'denunciante', 'denunciante', 'gen'],
+      ['tercero', 'Tercero afectado (propietario de un bien)', 'tercero afectado', 'tercera afectada', 'ter']],
+    juzgado: [['imputado', 'Imputado', 'imputado', 'imputada', 'inv'], ['acusado', 'Acusado', 'acusado', 'acusada', 'inv'],
+      ['agraviado', 'Agraviado', 'agraviado', 'agraviada', 'agr'],
+      ['tercero', 'Tercero afectado (propietario de un bien)', 'tercero afectado', 'tercera afectada', 'ter']]
+  };
+  var PRESETS = {
+    reprog: ['REPROGRAMACIÓN DE DILIGENCIA', 'Solicito la reprogramación de la diligencia de [declaración / audiencia] programada para el día [fecha y hora], toda vez que mi abogado defensor recién asume mi patrocinio y requiere de un plazo razonable para informarse de los actuados y preparar la defensa.'],
+    declar: ['DECLARACIÓN', 'Solicito se señale día y hora para rendir mi declaración, la que prestaré con la participación de mi abogado defensor.'],
+    lectura: ['LECTURA DE LOS ACTUADOS', 'Solicito se autorice a mi abogado defensor la lectura de los actuados, de conformidad con el artículo 84, inciso 7, del Código Procesal Penal.'],
+    prueba: ['OFRECIMIENTO DE MEDIO PROBATORIO', 'Ofrezco como medio probatorio [describir el documento], con el que se acredita [hecho que se quiere probar], a fin de que sea incorporado a los actuados y valorado por su Despacho.'],
+    domic: ['VARIACIÓN DE DOMICILIO PROCESAL', 'Hago de conocimiento de su Despacho que varío mi domicilio procesal al indicado en el presente escrito, solicitando que en adelante las notificaciones se cursen a dicho domicilio y a la casilla electrónica señalada.'],
+    virtual: ['PARTICIPACIÓN VIRTUAL', 'Solicito se me permita participar de manera virtual en la diligencia programada para el día [fecha y hora], para lo cual señalo el correo electrónico [correo] y el número de celular [celular] a fin de que se me remita el enlace respectivo.']
+  };
+  var lastTipo = null;
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  var ROM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  var els = Array.prototype.slice.call(document.querySelectorAll('[data-k]'));
+  var missing = 0;
+
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function el(k) { return document.querySelector('[data-k="' + k + '"]'); }
+  function val(k) { var e = el(k); if (!e) return ''; return e.type === 'checkbox' ? e.checked : e.value.trim(); }
+  function setVal(k, v) {
+    var e = el(k); if (!e) return;
+    if (e.type === 'checkbox') { e.checked = !!v; return; }
+    v = (v == null ? '' : String(v));
+    e.value = v;
+    // valor guardado que ya no está en el menú: pasa a "Otro (escribir)"
+    if (e.tagName === 'SELECT' && e.value !== v && v && e.querySelector('option[value="__otro"]')) { e.value = '__otro'; setVal(k + 'Otro', v); }
+    if (k === 'tipo') fillByTipo();
+  }
+  function cv(k) { var x = val(k); return x === '__otro' ? val(k + 'Otro') : x; }
+  function opts(k, items) {
+    var e = el(k), cur = e.value;
+    e.innerHTML = items.map(function (it) { return '<option value="' + esc(it[0]).replace(/"/g, '&quot;') + '">' + esc(it[1]) + '</option>'; }).join('');
+    e.value = cur; if (e.value !== cur) e.selectedIndex = 0;
+  }
+  function fillByTipo() {
+    var t = val('tipo') === 'juzgado' ? 'juzgado' : 'fiscalia';
+    if (t === lastTipo) return;
+    lastTipo = t;
+    opts('orgTipo', ORG[t].map(function (n) { return [n, n]; }).concat([['__otro', 'Otro (escribir completo)…']]));
+    opts('calidad', CAL[t].map(function (c) { return [c[0], c[1]]; }).concat([['__otro', 'Otra (escribir)…']]));
+  }
+  function calDef() {
+    var list = CAL[val('tipo') === 'juzgado' ? 'juzgado' : 'fiscalia'], c = val('calidad');
+    for (var i = 0; i < list.length; i++) if (list[i][0] === c) return { m: list[i][2], f: list[i][3], tpl: list[i][4] };
+    return { m: val('calidadOtro'), f: val('calidadOtro'), tpl: 'gen' };
+  }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // texto libre: lo que quede entre corchetes se resalta como dato pendiente
+  function rich(s) { return esc(s).replace(/\[([^\]]+)\]/g, function (m) { missing++; return '<span class="ph" style="background:#fff2a8">' + m + '</span>'; }); }
+  function ph(label) { missing++; return '<span class="ph" style="background:#fff2a8">[' + esc(label) + ']</span>'; }
+  function v(k, label) { var x = val(k); return x ? esc(x) : ph(label); }
+  function up(k, label) { var x = val(k); return x ? esc(x.toUpperCase()) : ph(label); }
+  function fecha(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? (parseInt(m[3], 10) + ' de ' + MESES[parseInt(m[2], 10) - 1] + ' de ' + m[1]) : ''; }
+  function sinPunto(s) { return s.replace(/[.\s]+$/, ''); }
+
+  function load() {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { saved = {}; }
+    var ord = [['', '—']].concat(ORD_M.map(function (_, i) { return [String(i + 1), (i + 1) + '.°']; }));
+    opts('orgNum', ord); opts('despNum', ord);
+    // escritos guardados con la versión anterior traían el despacho en un solo campo
+    if (saved.despacho && !Object.prototype.hasOwnProperty.call(saved, 'orgTipo')) saved.orgTipo = '__otro';
+    els.forEach(function (e) {
+      var k = e.getAttribute('data-k');
+      if (Object.prototype.hasOwnProperty.call(saved, k)) setVal(k, saved[k]);
+      else if (Object.prototype.hasOwnProperty.call(DEFAULTS, k)) setVal(k, DEFAULTS[k]);
+    });
+    if (!val('fecha')) setVal('fecha', today());
+    if (!val('escrito')) setVal('escrito', '01-' + new Date().getFullYear());
+  }
+  function save() {
+    var o = {};
+    els.forEach(function (e) { var k = e.getAttribute('data-k'); o[k] = e.type === 'checkbox' ? e.checked : e.value; });
+    try { localStorage.setItem(STORE, JSON.stringify(o)); } catch (e) { /* sin almacenamiento: el generador funciona igual */ }
+  }
+
+  function toggle() {
+    fillByTipo();
+    var cur = function (k) { return k === '@tpl' ? calDef().tpl : String(val(k)); };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-if]'), function (n) {
+      var p = n.getAttribute('data-if').split(':');
+      n.classList.toggle('hidden', cur(p[0]) !== p[1]);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ifnot]'), function (n) {
+      var p = n.getAttribute('data-ifnot').split(':');
+      n.classList.toggle('hidden', cur(p[0]) === p[1]);
+    });
+    var j = val('tipo') === 'juzgado';
+    document.getElementById('lblTipoOrg').textContent = j ? 'Tipo de juzgado' : 'Tipo de fiscalía';
+    document.getElementById('lblNum').textContent = (j ? 'Juzgado' : 'Fiscalía') + ' N.° (opcional)';
+    document.getElementById('lblCargo').textContent = j ? 'Juez' : 'Fiscal';
+    document.getElementById('lblCaso').textContent = j ? 'Expediente N.°' : 'Caso N.°';
+    Array.prototype.forEach.call(document.querySelectorAll('.lblDisp'), function (n) { n.textContent = j ? 'Resolución' : 'Disposición'; });
+    Array.prototype.forEach.call(document.querySelectorAll('.lblCarpeta'), function (n) { n.textContent = j ? 'el expediente' : 'la carpeta fiscal'; });
+  }
+
+  var S = {
+    p: 'margin:0 0 8pt 0;text-align:justify;line-height:150%;',
+    h: 'margin:10pt 0 4pt 0;font-weight:bold;line-height:150%;text-align:left;',
+    li: 'margin:0 0 3pt 0;text-align:justify;line-height:150%;',
+    ind: 'margin-left:5cm;'
+  };
+  function P(html, extra) { return '<p style="' + S.p + (extra || '') + '">' + html + '</p>'; }
+  function LI(html) { return '<p style="' + S.li + '">' + html + '</p>'; }
+
+  function build() {
+    missing = 0;
+    var fem = val('sexo') === 'f', g = function (m, f) { return fem ? f : m; };
+    var juz = val('tipo') === 'juzgado', destF = val('sexoDest') === 'f';
+    var orgTipo = val('orgTipo'), sala = juz && /^Sala/.test(orgTipo);
+    var cargo = sala ? (destF ? 'Presidenta' : 'Presidente') : juz ? 'Juez' : 'Fiscal';
+    var trat = destF ? 'señora' : 'señor';
+    var cd = calDef(), tpl = cd.tpl;
+    var ambito = juz ? 'al presente proceso' : 'a la presente investigación';
+    var ambito2 = juz ? 'el presente proceso' : 'la presente investigación';
+    var calRaw = g(cd.m, cd.f);
+    var calTxt = calRaw ? esc(calRaw) : ph('calidad'), calUp = calRaw ? esc(calRaw.toUpperCase()) : ph('CALIDAD');
+    var delitoRaw = cv('delito');
+    var delito = delitoRaw ? (/^contra\b/i.test(delitoRaw) ? 'del delito ' : 'del delito de ') + esc(sinPunto(delitoRaw)) : 'del delito de ' + ph('delito');
+    var n = 0, out = [];
+    var sec = function (title) { out.push('<p style="' + S.h + '">' + ROM[n++] + '. ' + title + '</p>'); };
+
+    // Sumilla
+    var partes = ['Me apersono', 'designo abogado defensor'];
+    if (tpl === 'ter') partes.splice(1, 0, 'solicito se me reconozca como ' + calRaw);
+    if (val('chkNotif') && val('chkCopias')) partes.push('solicito notificación electrónica y copias');
+    else if (val('chkNotif')) partes.push('solicito notificación electrónica');
+    else if (val('chkCopias')) partes.push('solicito copias');
+    if (val('chkOtro')) partes.push('otros');
+    if (partes.length > 4) partes = partes.slice(0, 3).concat(['otros']);
+    if (partes.length > 2 && / y /.test(partes[partes.length - 1])) partes = [partes.slice(0, -1).join(', ') + ';', partes[partes.length - 1]];
+    var sumilla = val('sumilla') ? esc(val('sumilla')) : esc(partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1] + '.');
+
+    // Encabezado
+    var rows = [[juz ? 'EXPEDIENTE N.°' : 'CASO N.°', v('caso', juz ? 'N.° de expediente' : 'N.° de carpeta fiscal')]];
+    if (juz && val('especialista')) rows.push(['ESPECIALISTA', esc(val('especialista'))]);
+    if (val('escrito')) rows.push(['ESCRITO N.°', esc(val('escrito'))]);
+    rows.push([calUp, v('nombre', 'nombres y apellidos')]);
+    rows.push(['DELITO', delitoRaw ? esc(sinPunto(delitoRaw)) : ph('delito')]);
+    rows.push(['SUMILLA', sumilla]);
+    var cell = 'padding:0 0 2pt 0;vertical-align:top;font-family:Arial,sans-serif;font-size:11pt;line-height:125%;';
+    out.push('<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 14pt 5cm;">' + rows.map(function (r) {
+      return '<tr><td style="' + cell + 'width:3.6cm;font-weight:bold;">' + r[0] + '</td><td style="' + cell + 'width:0.4cm;">:</td><td style="' + cell + 'text-align:justify;">' + r[1] + '</td></tr>';
+    }).join('') + '</table>');
+
+    // Destinatario
+    var desp;
+    if (orgTipo === '__otro') desp = up('despacho', 'DEL … / DE LA …');
+    else {
+      var orgFem = /^(Sala|Fiscalía)/.test(orgTipo), nO = parseInt(val('orgNum'), 10), nD = juz ? 0 : parseInt(val('despNum'), 10);
+      desp = esc(((nD ? 'DEL ' + ORD_M[nD - 1] + ' DESPACHO ' : '') + (orgFem ? 'DE LA ' : 'DEL ') + (nO ? (orgFem ? ORD_F : ORD_M)[nO - 1] + ' ' : '') + orgTipo + ' DE ').toUpperCase()) +
+        (cv('sede') ? esc(cv('sede').toUpperCase()) : ph('SEDE'));
+    }
+    var dest = (destF ? 'SEÑORA ' : 'SEÑOR ') + cargo.toUpperCase() + ' ' + desp;
+    if (val('fiscal') && !sala) dest += ' – ' + cargo.toUpperCase() + ' A CARGO: ' + (destF ? 'DRA. ' : 'DR. ') + esc(val('fiscal').toUpperCase());
+    out.push(P('<b><u>' + sinPunto(dest) + '.</u></b>', 'margin-bottom:12pt;'));
+
+    // Comparecencia
+    var intro = '<b>' + up('nombre', 'NOMBRES Y APELLIDOS') + '</b>, ' + g('identificado', 'identificada') + ' con DNI N.° ' + v('dni', 'DNI') +
+      ', con domicilio real en ' + v('domicilio', 'domicilio real') + ', provincia y departamento de ' + v('provincia', 'provincia') +
+      (val('telefono') ? ', teléfono celular N.° ' + esc(val('telefono')) : '') +
+      '; señalando domicilio procesal en ' + v('abDomicilio', 'domicilio procesal') + ', y Casilla Electrónica N.° ' + v('abCasilla', 'casilla') +
+      '; ante usted, con el debido respeto, me presento y digo:';
+    out.push(P(intro, S.ind + 'margin-bottom:12pt;'));
+
+    // I. Apersonamiento
+    if (tpl === 'inv') {
+      sec('APERSONAMIENTO');
+      var conoc, agr = cv('agraviado');
+      if (val('dispNum')) {
+        var d = (juz ? 'Resolución N.° ' : 'Disposición N.° ') + esc(val('dispNum')) + (fecha(val('dispFecha')) ? ', de fecha ' + fecha(val('dispFecha')) : '');
+        conoc = juz ? 'Habiendo sido ' + g('notificado', 'notificada') + ' con la ' + d + ', emitida en el proceso que se sigue en mi contra'
+                    : 'Habiendo tomado conocimiento de la ' + d + ', que dispone ' + (cv('etapa') ? esc(sinPunto(cv('etapa'))) : ph('lo que dispone')) + ' en la investigación que se sigue en mi contra';
+      } else {
+        conoc = 'Habiendo tomado conocimiento ' + (juz ? 'del proceso' : 'de la investigación') + ' que se sigue en mi contra';
+      }
+      out.push(P(conoc + ' por la presunta comisión ' + delito + (val('agraviado') === '__otro' && !agr ? ', en agravio de ' + ph('nombre del agraviado') : '') + (agr ? ', en agravio ' + esc(sinPunto(agr).replace(/^(el\s+|(?!el\s))/i, function (m) { return m ? 'del ' : 'de '; })) : '') +
+        ', me <b>APERSONO</b> ' + ambito + ' en calidad de ' + calTxt +
+        ', a fin de ejercer mi derecho de defensa conforme al artículo 139, inciso 14, de la Constitución Política del Perú y al artículo IX del Título Preliminar del Código Procesal Penal; ' +
+        'solicitando se me tenga por ' + g('apersonado', 'apersonada') + ' y se entiendan conmigo las actuaciones sucesivas.'));
+    } else if (tpl === 'gen') {
+      sec('APERSONAMIENTO');
+      out.push(P('Habiendo tomado conocimiento ' + (juz ? 'del presente proceso' : 'de la presente investigación') + ', me <b>APERSONO</b> en calidad de ' + calTxt +
+        ', a fin de ejercer los derechos que la ley me reconoce; solicitando se me tenga por ' + g('apersonado', 'apersonada') + ' y se me notifiquen las actuaciones sucesivas.'));
+    } else if (tpl === 'agr') {
+      sec('APERSONAMIENTO');
+      out.push(P('Habiendo tomado conocimiento ' + (juz ? 'del proceso seguido' : 'de la investigación seguida') + ' contra ' + v('contra', 'nombre del investigado') +
+        ' por la presunta comisión ' + delito + ' en mi agravio, me <b>APERSONO</b> ' + ambito + ' en calidad de ' + calTxt +
+        ', a fin de ejercer los derechos que me reconoce el artículo 95 del Código Procesal Penal; solicitando se me tenga por ' + g('apersonado', 'apersonada') +
+        ' y se me notifiquen las actuaciones sucesivas.'));
+    } else {
+      sec('APERSONAMIENTO Y RECONOCIMIENTO COMO ' + calUp);
+      out.push(P('Me <b>APERSONO</b> ' + ambito + ' y solicito se me reconozca como ' + calTxt + ', por ser ' + g('propietario', 'propietaria') + ' del ' +
+        v('bien', 'bien: vehículo de placa …, inscrito en la Partida N.° …') + ', bien que no ha tenido participación alguna en el delito materia de ' +
+        (juz ? 'proceso' : 'investigación') + ', conforme acredito con el documento que adjunto.'));
+    }
+
+    // II. Abogado
+    sec('DESIGNACIÓN DE ABOGADO DEFENSOR');
+    var abog = '<b>abogado ' + up('abNombre', 'NOMBRE DEL ABOGADO') + '</b>, con Registro del ' + v('abColegio', 'colegio') + ' ' + v('abRegistro', 'registro');
+    if (tpl === 'inv') {
+      out.push(P('Al amparo de los artículos 71, inciso 2, literal c), y 80 del Código Procesal Penal, <b>DESIGNO</b> como mi abogado defensor de libre elección al ' + abog +
+        ', quien ejercerá mi defensa técnica con todas las facultades previstas en el artículo 84 del Código Procesal Penal, y cuyos datos son los siguientes:'));
+    } else {
+      out.push(P('<b>DESIGNO</b> como mi abogado al ' + abog.replace('<b>abogado ', '<b>letrado ') + ', quien me patrocinará en ' + ambito2 + ' con las facultades que la ley le confiere, y cuyos datos son los siguientes:'));
+    }
+    out.push(LI('<b>• Domicilio procesal:</b> ' + v('abDomicilio', 'domicilio procesal') + '.'));
+    out.push(LI('<b>• Casilla electrónica:</b> N.° ' + v('abCasilla', 'casilla') + '.'));
+    out.push(LI('<b>• Correo electrónico:</b> ' + v('abCorreo', 'correo')));
+    out.push(LI('<b>• Número de celular:</b> ' + v('abCelular', 'celular')));
+    out.push(P('Manifiesto estar debidamente ' + g('instruido', 'instruida') + ' de los alcances de esta designación.', 'margin-top:6pt;'));
+
+    // Opcionales
+    if (val('chkNotif')) {
+      sec('NOTIFICACIONES ELECTRÓNICAS');
+      var extra = '';
+      if (val('chkNotifCliente')) {
+        var c = [];
+        if (val('correo')) c.push('a mi correo electrónico ' + esc(val('correo')));
+        if (val('telefono')) c.push('a mi teléfono celular N.° ' + esc(val('telefono')));
+        extra = ', así como ' + (c.length ? c.join(' y ') : ph('correo o celular del patrocinado'));
+      }
+      out.push(P('Solicito que todas las notificaciones que su Despacho emita en ' + (juz ? 'el Expediente' : 'la Carpeta Fiscal') + ' N.° ' + v('caso', 'N.°') +
+        ' sean cursadas a la casilla electrónica y al correo electrónico de mi abogado defensor señalados en el punto anterior' + extra + '.'));
+    }
+    if (val('chkCopias')) {
+      sec('COPIAS DE ' + (juz ? 'LOS ACTUADOS' : 'LA CARPETA FISCAL'));
+      out.push(P('De conformidad con el artículo IX del Título Preliminar y el artículo 84, inciso 7, del Código Procesal Penal, solicito se me expidan copias simples de todo lo actuado en ' +
+        (juz ? 'el expediente' : 'la carpeta fiscal') + ', a fin de ejercer adecuadamente mi derecho de defensa, para lo cual se coordinará con su Despacho el número de folios y el pago de la tasa correspondiente.'));
+    }
+    if (val('chkOtro')) {
+      sec(up('otroTitulo', 'TÍTULO DEL PEDIDO'));
+      var txt = val('otroTexto');
+      if (txt) txt.split(/\n+/).forEach(function (t) { if (t.trim()) out.push(P(rich(t.trim()))); });
+      else out.push(P(ph('texto del pedido')));
+    }
+
+    // Anexos
+    var anexos = val('anexos').split(/\n+/).map(function (a) { return a.trim(); }).filter(Boolean);
+    if (anexos.length) {
+      sec('ANEXOS');
+      anexos.forEach(function (a, i) { out.push(LI('<b>1-' + String.fromCharCode(65 + i) + '.</b> ' + esc(a))); });
+    }
+
+    // Petitorio
+    var pet = 'tener por ' + g('apersonado', 'apersonada') + ' ' + g('al', 'a la') + ' recurrente, por designado a su abogado defensor';
+    if (val('chkNotif')) pet += ', por señalados el domicilio procesal y la casilla electrónica';
+    out.push(P('<b>POR LO EXPUESTO:</b> A usted, ' + trat + ' ' + cargo + ', solicito ' + pet + ', y proveer conforme a lo solicitado por ser de ley.', 'margin-top:12pt;margin-bottom:12pt;'));
+    out.push(P(v('ciudad', 'ciudad') + ', ' + (fecha(val('fecha')) || ph('fecha')) + '.', 'text-align:left;'));
+
+    // Firmas
+    var fc = 'width:50%;text-align:center;vertical-align:top;font-family:Arial,sans-serif;font-size:11pt;line-height:130%;padding:0 6pt;';
+    var fa = '_____________________________<br><b>' + up('abNombre', 'ABOGADO') + '</b><br>ABOGADO<br>' + v('abRegistro', 'registro');
+    var fp = '_____________________________<br><b>' + up('nombre', 'NOMBRES Y APELLIDOS') + '</b><br>DNI N.° ' + v('dni', 'DNI');
+    var f = val('firmas');
+    var cells = f === 'ambos' ? '<td style="' + fc + '">' + fa + '</td><td style="' + fc + '">' + fp + '</td>'
+              : '<td style="' + fc + 'width:100%;">' + (f === 'abogado' ? fa : fp) + '</td>';
+    out.push('<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;margin-top:60pt;"><tr>' + cells + '</tr></table>');
+    return out.join('\n');
+  }
+
+  function render() {
+    toggle();
+    document.getElementById('sheet').innerHTML = build();
+    var st = document.getElementById('status');
+    st.textContent = missing ? ('Faltan ' + missing + (missing === 1 ? ' dato' : ' datos')) : 'Listo para imprimir';
+    st.className = 'status' + (missing ? '' : ' ok');
+    save();
+  }
+
+  function fileName() {
+    var base = 'Apersonamiento_' + (val('nombre') || 'patrocinado') + (val('caso') ? '_Caso_' + val('caso') : '');
+    return base.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/_+/g, '_');
+  }
+  function avisoFaltan() { return !missing || confirm('Todavía faltan ' + missing + ' dato(s), resaltados en amarillo. ¿Continuar de todos modos?'); }
+
+  document.getElementById('btnPdf').addEventListener('click', function () {
+    if (!avisoFaltan()) return;
+    var t = document.title; document.title = fileName(); window.print(); document.title = t;
+  });
+  document.getElementById('btnWord').addEventListener('click', function () {
+    if (!avisoFaltan()) return;
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+      '<head><meta charset="utf-8"><title>' + esc(fileName()) + '</title>' +
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+      '<style>@page Section1{size:21.0cm 29.7cm;margin:2.5cm 2.5cm 2.5cm 3.0cm;} div.Section1{page:Section1;} ' +
+      'body,p,td{font-family:Arial,sans-serif;font-size:11pt;color:#000;}</style></head>' +
+      '<body lang="ES-PE"><div class="Section1">' + document.getElementById('sheet').innerHTML + '</div></body></html>';
+    var blob = new Blob(['﻿', html], { type: 'application/msword' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = fileName() + '.doc';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+  document.getElementById('btnCopiar').addEventListener('click', function () {
+    var node = document.getElementById('sheet'), sel = window.getSelection(), r = document.createRange();
+    r.selectNodeContents(node); sel.removeAllRanges(); sel.addRange(r);
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    sel.removeAllRanges();
+    var b = this, t = b.textContent; b.textContent = ok ? 'Copiado ✓' : 'No se pudo copiar';
+    setTimeout(function () { b.textContent = t; }, 1600);
+  });
+  document.getElementById('btnNuevo').addEventListener('click', function () {
+    if (!confirm('Se borrarán los datos del caso y del patrocinado (los del abogado se conservan). ¿Continuar?')) return;
+    els.forEach(function (e) {
+      var k = e.getAttribute('data-k');
+      if (LAWYER.indexOf(k) >= 0) return;
+      setVal(k, Object.prototype.hasOwnProperty.call(DEFAULTS, k) ? DEFAULTS[k] : (e.type === 'checkbox' ? false : ''));
+    });
+    setVal('fecha', today()); setVal('escrito', '01-' + new Date().getFullYear());
+    render(); el('nombre').focus();
+  });
+
+  el('otroTipo').addEventListener('change', function () {
+    var p = PRESETS[this.value];
+    if (p) { setVal('otroTitulo', p[0]); setVal('otroTexto', p[1]); }
+  });
+  document.getElementById('anexoAdd').addEventListener('change', function () {
+    var a = this.value; this.selectedIndex = 0;
+    if (!a) return;
+    var cur = el('anexos').value.replace(/\s+$/, '');
+    if (cur.split(/\n+/).indexOf(a) < 0) el('anexos').value = (cur ? cur + '\n' : '') + a;
+    render();
+  });
+  document.getElementById('form').addEventListener('input', render);
+  document.getElementById('form').addEventListener('change', render);
+  load(); render();
+})();
+</script>
+</body>
+</html>
